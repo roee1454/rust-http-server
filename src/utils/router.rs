@@ -57,7 +57,6 @@ impl Router {
             _ => handle_method_not_allowed(),
         };
 
-        // Write the response back to the stream
         stream
             .write_all(response.as_bytes())
             .await
@@ -65,7 +64,6 @@ impl Router {
     }
 }
 
-// Functions for handling responses
 fn handle_ok(response: &Response) -> String {
     format!(
         "HTTP/1.1 {} {}\r\nContent-type: {}\r\n\r\n{}",

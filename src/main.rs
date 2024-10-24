@@ -1,6 +1,6 @@
 mod init;
 mod utils;
-mod index;
+mod app;
 
 #[tokio::main]
 async fn main() {
