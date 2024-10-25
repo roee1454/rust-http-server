@@ -1,4 +1,4 @@
-use crate::utils::helpers::{parse_body, parse_query_params, parse_dynamic_url_params};
+use crate::utils::helpers::{parse_body, parse_query_params};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tokio::io::AsyncReadExt;
@@ -15,7 +15,6 @@ pub struct Request {
     pub content_length: usize,
     pub body: HashMap<String, String>,
     pub query: HashMap<String, String>,
-    pub params: HashMap<String, String>
 }
 
 impl Request {
@@ -31,7 +30,6 @@ impl Request {
             raw: "".to_owned(),
             body: HashMap::new(),
             query: HashMap::new(),
-            params: HashMap::new(),
         }
     }
 }
@@ -59,7 +57,6 @@ pub async fn parse_request_data(stream: &mut tokio::net::TcpStream) -> Request {
         request.route = route_parts.next().unwrap_or("/").to_string();
         let query_string = route_parts.next().unwrap_or("");
         request.query = parse_query_params(query_string);
-        request.params = parse_dynamic_url_params(&request.route);
     }
 
     for line in lines.by_ref() {

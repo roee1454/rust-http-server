@@ -11,14 +11,14 @@ pub async fn run(port: usize) {
         .expect("Failed to bind ip address to tcp listener");
     println!("Server is running at: http:://localhost:{}", port);
     loop {
-        let (mut stream, _) = listener.accept().await.expect("Failed to connect client");
+        let (mut stream, _) = listener.accept().await.expect("Failed to accept the client's established connection");
         tokio::spawn(async move {
-            handle_request(&mut stream).await;
+            handle_stream(&mut stream).await;
         });
     }
 }
 
-async fn handle_request(stream: &mut tokio::net::TcpStream,) {
+async fn handle_stream(stream: &mut tokio::net::TcpStream,) {
     let request = parse_request_data(stream).await;
     let mut router = Router::new();
     endpoints(&mut router);

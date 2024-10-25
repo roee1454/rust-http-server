@@ -42,17 +42,17 @@ pub fn parse_query_params(query: &str) -> HashMap<String, String> {
 }
 
 
-pub fn parse_dynamic_url_params(route: &str) -> HashMap<String, String> {
-    let mut params = HashMap::new();
-    let route_segments: Vec<&str> = route.split('/').collect();
+// pub fn parse_dynamic_url_params(route: &str) -> HashMap<String, String> {
+//     let mut params = HashMap::new();
+//     let route_segments: Vec<&str> = route.split('/').collect();
 
-    for (i, segment) in route_segments.iter().enumerate() {
-        if segment.starts_with(':') && i < route_segments.len() - 1 {
-            let param_name = segment.trim_start_matches(':');
-            let param_value = route_segments[i + 1];
-            params.insert(param_name.to_string(), param_value.to_string());
-        }
-    }
-    
-    params
-}
+//     for (i, segment) in route_segments.iter().enumerate() {
+//         if segment.starts_with(':') && i < route_segments.len() - 1 {
+//             let param_name = segment.trim_start_matches(':');
+//             let param_value = route_segments[i + 1];
+//             params.insert(param_name.to_string(), param_value.to_string());
+//         }
+//     }
+
+//     params
+// }
