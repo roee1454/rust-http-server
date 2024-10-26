@@ -67,12 +67,13 @@ impl Response {
 
     pub fn error(&self, body: &str, status: i64) -> Response {
         Response {
-            status: status.to_owned(),
+            status,
             body: json!(body),
             status_text: "Internal Server Error".to_owned(),
             content_type: "text/plain".to_owned(),
             raw: format!(
-                "HTTP/1.1 500\r\nContent-Type: text/plain\r\n\r\n{}",
+                "HTTP/1.1 {} Internal Server Error\r\nContent-Type: text/plain\r\n\r\n{}",
+                status,
                 body
             ),
             cookies: self.cookies.to_owned(),
@@ -80,22 +81,8 @@ impl Response {
         }
     }
 
-    pub fn file(&self, filename: &str, content: &str) -> Response {
-        Response {
-            content_type: "text/plain".to_owned(),
-            status_text: "OK".to_owned(),
-            status: 200,
-            body: json!(format!("{filename}:{content}")),
-            raw: format!(
-                "HTTP/1.1 {}\r\nContent-Type: text/plain\r\n\r\n{}",
-                200, self.body
-            ),
-            cookies: self.cookies.to_owned(),
-            is_file: true,
-        }
-    }
 
-    pub fn send_file(&self, path: &str) -> Response {
+    pub fn send_file(&self, path: &str, status: i64) -> Response {
         let filename = path.split("/").last().unwrap();
         let file_type = from_path(path).first_or_octet_stream().to_string();
         let mut file_content = String::new();
@@ -115,11 +102,11 @@ impl Response {
         Response {
             content_type: file_type.to_owned(),
             status_text: "OK".to_owned(),
-            status: 200,
+            status,
             body: json!(format!("{filename}:{file_content}")),
             raw: format!(
                 "HTTP/1.1 {}\r\nContent-Type: {}\r\n\r\n{}",
-                200, file_type, self.body
+                status, file_type, self.body
             ),
             cookies: self.cookies.to_owned(),
             is_file: true,
