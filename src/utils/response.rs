@@ -11,6 +11,7 @@ use std::fs;
 #[allow(dead_code)]
 pub struct Response {
     pub content_type: String,
+    pub content_length: usize,
     pub status_text: String,
     pub status: i64,
     pub body: Value,
@@ -23,6 +24,7 @@ pub struct Response {
 impl Response {
     pub fn new() -> Self {
         Self {
+            content_length: 0,
             content_type: "text/plain".to_owned(),
             status_text: "OK".to_owned(),
             status: 200,
@@ -35,6 +37,7 @@ impl Response {
 
     pub fn text(&self, body: &str, status: i64) -> Response {
         Response {
+            content_length: body.len(),
             content_type: "text/plain".to_owned(),
             status_text: "OK".to_owned(),
             status,
@@ -51,6 +54,7 @@ impl Response {
 
     pub fn json(&self, body: Value, status: i64) -> Response {
         Response {
+            content_length: body.to_string().len(),
             content_type: "application/json".to_owned(),
             status_text: "OK".to_owned(),
             status,
@@ -70,6 +74,7 @@ impl Response {
             status,
             body: json!(body),
             status_text: "Internal Server Error".to_owned(),
+            content_length: body.len(),
             content_type: "text/plain".to_owned(),
             raw: format!(
                 "HTTP/1.1 {} Internal Server Error\r\nContent-Type: text/plain\r\n\r\n{}",
@@ -100,6 +105,7 @@ impl Response {
         }
 
         Response {
+            content_length: file_content.len(),
             content_type: file_type.to_owned(),
             status_text: "OK".to_owned(),
             status,
@@ -112,6 +118,26 @@ impl Response {
             is_file: true,
         }
     }
+
+    pub fn render(&self, path: &str, status: i64) -> Response {
+        let file_content = fs::read_to_string(path).expect("Error while reading html content");
+        Response {
+            content_length: file_content.len(),
+            content_type: "text/html".to_owned(),
+            status_text: "OK".to_owned(),
+            status,
+            body: json!(file_content),
+            raw: format!(
+                "HTTP/1.1 {} OK\r\nContent-Type: text/html\r\nContent-Length: {}\r\n\r\n{}",
+                status,
+                file_content.len(),
+                file_content
+            ),
+            cookies: self.cookies.to_owned(),
+            is_file: false,
+        }
+    }
+
 }
 
 pub async fn handle_response(

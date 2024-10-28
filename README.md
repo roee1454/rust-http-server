@@ -1,113 +1,247 @@
-# Express clone in Rust!
+# Rust HTTP Server
 
-Welp, this is actaully my first big project in rust, overall very nice languege with a lot of nice to have features.
-
-I decided I hate javascript and node servers in particular, so I've came up with the so original idea of trying to build my own HTTP 1.1 client using rust which was a meaningful learning experience for me the mere infrerior javascript developer.
-
-Express seemed like a very comfortable place to take inspiration from
+A lightweight HTTP server implementation in Rust, inspired by Express.js. This project implements core HTTP functionality with a clean, Express-like API.
 
 ## Features
 
-- HTTP 1.1 - Who would've thought about this😶
-- Text, Json and File Responses
-- COOKIES
-- `GET` `POST` `PUT` `DELETE`
-- ERRORS
-- Expandable and very easy to manage folder structure!
-- Core network code is on the project!
-- Query params support
+- Full HTTP/1.1 protocol support
+- Response types:
+  - Plain text
+  - JSON
+  - Static files
+  - HTML templates
+- Cookie management
+- Standard HTTP methods (`GET`, `POST`, `PUT`, `DELETE`, `PATCH`)
+- Error handling
+- Query parameter parsing
+- Modular project structure
+- Built from scratch network implementation
+- MongoDB integration
+- Async/sync route handlers
 
-## Usage
+## Getting Started
 
-1. Installation
-
+1. Clone the repository:
    ```bash
    git clone https://github.com/roee1454/rust-http-server
    ```
-   And thats it! Shocking!!!
-   From there just hit
 
+2. Set up environment variables:
+   Create a `.env` file with:
+   ```
+   DB_URL=mongodb://your-connection-string
+   ```
+
+3. Run the server:
    ```bash
    cargo run
    ```
-2. Explanation
 
-   So I am going to be pretty straight forward here, If you are here I assume you know what you are doing, so try to understand my fuzzy explanation
+## Usage Guide
 
-   You want to start to code at the `src/app/index.rs` file, this is the file where all the endpoints are created
+### Application Setup
 
-   There you'll have a `&mut Router` passed down to you
-   `Router` is a class which gives you the ability to define whatever endpoint you want
+The server uses a `Values` struct to share database connections and other global resources across routes. This is initialized in `src/app/start.rs`:
 
-   important methods:
+```rust
+// In src/app/start.rs
+pub struct Values {
+    pub database: Database,
+    // Add other shared resources here
+}
 
-   `router.get(endpoint, handler);`
+// Initialize the values struct
+pub async fn start() -> Values {
+    // Get neccessary .env variables
+    Values {  }
+}
+```
 
-   `router.post(endpoint, handler);`
+### Basic Route Setup
 
-   `router.put(endpoint, handler);`
+Routes are defined in `src/app/index.rs`. Here's how to work with different types of handlers:
 
-   `router.delete(endpoint, handler); `
+```rust
+use super::start::Values;
+use std::sync::Arc;
 
-   `Handler` is a clousere which contains a `&Request`
-
-   this `&Request` contains all the info about the request's url, headers and body
-3. Examples
-
-   - Hello world example:
-
-   ```rust
-   router.get("/", |_| {
-       let response = Response::new();
-       response.text("Hello, World", 200) // Returns hello, world with a status code 200
-   });
-   ```
-   - Json example:
-
-   ```rust
-   router.get("/", |_| {
+pub async fn endpoints(router: &mut Router, values: Arc<Values>) {
+    // Simple synchronous route
+    router.get("/hello", |_| {
         let response = Response::new();
-        response.json(json!({ "id": 1 }), 200) // Returns a json object with a status code 200
-   });
-   ```
-   - Send File example:
+        response.text("Hello, World!", 200)
+    });
 
-   ```rust
-   router.get("/file", |_| {
-       let response = Response::new();
-       response.send_file("/path/to/file", 200) // Filename is the original's filename. Returns an http response contains the file as a downloadable with status code 200
-   })
-   ```
-   - Query Params and Error example:
-
-   ```rust
-   router.get("/user", |req: &Request| {
-       let response = Response::new(); // Initiating a new response
-       let query: &HashMap<String, String> = &req.query; // Query is just a reference to a hashmap, which contains all the query params recieved from your request
-       match query.get("id") { // Getting a param from the hashmap
-           Some(id) => {
-               response.text(&format!("Found user with id: {id}"), 200) // Returns a regular text response with his user id, status code 200
-           }
-           None => {
-               response.error("You need to provide an id", 400) // Returns a response with a status text of "Internal Server Error", status code 400
-           }
+    // Async route with database access (using mongoDB) (example)
+    router.get_async("/users", move |request| {
+        let values = values.clone();  // Clone Arc for async move
+        async move {
+            let collection = values.database.collection::<User>("users");
+            // ... database operations
         }
-   })
-   ```
-   - Cookies and requset body example:
+    });
 
-   ```rust
-   router.post("new-user", |req: &Request| {
-       let request_body: &HashMap<String, String> = &req.body; // The request body is just a reference to a hashmap, contains all the json data sent to the backend, if the data is only text, you'll need to get the 'body' param
+    // Route with shared values in closure
+    router.get("/stats", move |_| {
+        let values = values.clone();
+        let response = Response::new();
+        // Use values.database or other shared resources
+        response.text("Stats processed", 200)
+    });
+}
+```
 
-       let text = request_body.get("body").unwrap(); // If not json, get this param!!!
-       let user_data = request_body.get("user_data").unwrap(); // Getting a json param
-       // Create user in the data base..
+### Working with Request Data
 
-       let mut response = Response::new(); // Initiating a new response
-       response.cookies.insert("session_id".to_string(), "ILoveCookies".to_string()); // Inserting a cookie into the cookies hashmap
-       response.json(json!({
-           "message": "user is created"
-       }), 200) // Returns a json response with a status code 200, cookies are also sent back to the client
-   })
-   ```
+```rust
+// Query parameters
+router.get("/search", |request| {
+    let query = &request.query;
+    let term = query.get("q").unwrap_or("");
+    let page = query.get("page").unwrap_or("1");
+
+    let response = Response::new();
+    response.json(json!({
+        "search_term": term,
+        "page": page,
+        "results": []
+    }), 200)
+});
+
+// Request body (POST/PUT)
+router.post("/users", |request| {
+    let name = request.body.get("name").unwrap_or("");
+    let email = request.body.get("email").unwrap_or("");
+
+    let response = Response::new();
+    response.json(json!({
+        "created": {
+            "name": name,
+            "email": email
+        }
+    }), 201)
+});
+```
+
+### Database Operations
+
+```rust
+// Example User model
+#[derive(Debug, Serialize, Deserialize)]
+struct User {
+    _id: String,
+    name: String,
+    email: String,
+}
+
+// Async database query
+router.get_async("/users", move |request| {
+    let values = values.clone();
+    async move {
+        let collection = values.database.collection::<User>("users");
+        match collection.find_one(None, None).await {
+            Ok(Some(user)) => {
+                let response = Response::new();
+                response.json(json!(user), 200)
+            }
+            Ok(None) => {
+                let response = Response::new();
+                response.error("User not found", 404)
+            }
+            Err(e) => {
+                let response = Response::new();
+                response.error(&e.to_string(), 500)
+            }
+        }
+    }
+});
+
+// Database insert
+router.post_async("/users", move |request| {
+    let values = values.clone();
+    async move {
+        let collection = values.database.collection::<User>("users");
+        let new_user = User {
+            _id: "".to_string(),
+            name: request.body.get("name").unwrap_or("").to_string(),
+            email: request.body.get("email").unwrap_or("").to_string(),
+        };
+
+        match collection.insert_one(new_user, None).await {
+            Ok(_) => {
+                let response = Response::new();
+                response.text("User created", 201)
+            }
+            Err(e) => {
+                let response = Response::new();
+                response.error(&e.to_string(), 500)
+            }
+        }
+    }
+});
+```
+
+### File Operations
+
+```rust
+// Serve static files
+router.get("/download", |_| {
+    let response = Response::new();
+    response.send_file("files/document.pdf", 200)
+});
+
+// Render HTML templates
+router.get("/home", |_| {
+    let response = Response::new();
+    response.render("templates/home.html", 200)
+});
+```
+
+### Working with Cookies
+
+```rust
+router.get("/login", |_| {
+    let mut response = Response::new();
+    // Set multiple cookies
+    response.cookies.insert("session".to_string(), "abc123".to_string());
+    response.cookies.insert("user_id".to_string(), "12345".to_string());
+    response.text("Logged in", 200)
+});
+```
+
+### Error Handling
+
+```rust
+router.get("/protected", |_| {
+    let response = Response::new();
+    response.error("Unauthorized", 401)
+});
+```
+
+## Response Types
+
+The server supports multiple response types:
+
+- **Text**: `response.text("Hello", 200)`
+- **JSON**: `response.json(json!({"key": "value"}), 200)`
+- **HTML**: `response.render("template.html", 200)`
+- **File**: `response.send_file("file.pdf", 200)`
+- **Error**: `response.error("Error message", 500)`
+
+## HTTP Methods
+
+All standard HTTP methods are supported:
+
+```rust
+router.get("/resource", handler);
+router.post("/resource", handler);
+router.put("/resource", handler);
+router.patch("/resource", handler);
+router.delete("/resource", handler);
+```
+
+Each method also has an async version (e.g., `get_async`, `post_async`) for handling asynchronous operations.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.

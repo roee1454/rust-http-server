@@ -4,5 +4,6 @@ mod app;
 
 #[tokio::main]
 async fn main() {
-    init::server::run(3000).await;
+    let values = app::start::start().await;
+    init::server::run(4000, values).await;
 }
