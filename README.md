@@ -1,9 +1,9 @@
+
 # Rust HTTP Server
 
 A lightweight HTTP server implementation in Rust, inspired by Express.js. This project implements core HTTP functionality with a clean, Express-like API.
 
 ## Features
-
 - Full HTTP/1.1 protocol support
 - Response types:
   - Plain text
@@ -11,85 +11,52 @@ A lightweight HTTP server implementation in Rust, inspired by Express.js. This p
   - Static files
   - HTML templates
 - Cookie management
-- Standard HTTP methods (`GET`, `POST`, `PUT`, `DELETE`, `PATCH`)
+- Standard HTTP methods (GET, POST, PUT, DELETE, PATCH)
 - Error handling
 - Query parameter parsing
 - Modular project structure
 - Built from scratch network implementation
-- MongoDB integration
 - Async/sync route handlers
 
 ## Getting Started
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/roee1454/rust-http-server
-   ```
+### Clone the repository:
 
-2. Set up environment variables:
-   Create a `.env` file with:
-   ```
-   DB_URL=mongodb://your-connection-string
-   ```
+```bash
+git clone https://github.com/roee1454/rust-http-server
+```
 
-3. Run the server:
-   ```bash
-   cargo run
-   ```
+### Setup a basic server
+```rust
+use rust_express::init::App;
+use rust_express::utils::{response::Response, router::Router};
+
+#[tokio::main]
+async fn main() {
+    let mut app = App::new();
+
+    app.endpoints(move |router: &mut Router| {
+        router.get("/", |_| {
+            Response::new().text("Hello, World", 200)
+        });
+    });
+
+    app.run(4000).await;
+}
+```
+
+
+### Run the server:
+
+```bash
+cargo run
+```
 
 ## Usage Guide
 
-### Application Setup
-
-The server uses a `Values` struct to share database connections and other global resources across routes. This is initialized in `src/app/start.rs`:
-
-```rust
-// In src/app/start.rs
-pub struct Values {
-    pub database: Database,
-    // Add other shared resources here
-}
-
-// Initialize the values struct
-pub async fn start() -> Values {
-    // Get neccessary .env variables
-    Values {  }
-}
-```
-
 ### Basic Route Setup
 
-Routes are defined in `src/app/index.rs`. Here's how to work with different types of handlers:
-
-```rust
-use super::start::Values;
-use std::sync::Arc;
-
-pub async fn endpoints(router: &mut Router, values: Arc<Values>) {
-    // Simple synchronous route
-    router.get("/hello", |_| {
-        let response = Response::new();
-        response.text("Hello, World!", 200)
-    });
-
-    // Async route with database access (using mongoDB) (example)
-    router.get_async("/users", move |request| {
-        let values = values.clone();  // Clone Arc for async move
-        async move {
-            let collection = values.database.collection::<User>("users");
-            // ... database operations
-        }
-    });
-
-    // Route with shared values in closure
-    router.get("/stats", move |_| {
-        let values = values.clone();
-        let response = Response::new();
-        // Use values.database or other shared resources
-        response.text("Stats processed", 200)
-    });
-}
-```
+Routes are defined in `src/main.rs`. Here's how to work with different types of handlers:
 
 ### Working with Request Data
 
@@ -120,64 +87,6 @@ router.post("/users", |request| {
             "email": email
         }
     }), 201)
-});
-```
-
-### Database Operations
-
-```rust
-// Example User model
-#[derive(Debug, Serialize, Deserialize)]
-struct User {
-    _id: String,
-    name: String,
-    email: String,
-}
-
-// Async database query
-router.get_async("/users", move |request| {
-    let values = values.clone();
-    async move {
-        let collection = values.database.collection::<User>("users");
-        match collection.find_one(None, None).await {
-            Ok(Some(user)) => {
-                let response = Response::new();
-                response.json(json!(user), 200)
-            }
-            Ok(None) => {
-                let response = Response::new();
-                response.error("User not found", 404)
-            }
-            Err(e) => {
-                let response = Response::new();
-                response.error(&e.to_string(), 500)
-            }
-        }
-    }
-});
-
-// Database insert
-router.post_async("/users", move |request| {
-    let values = values.clone();
-    async move {
-        let collection = values.database.collection::<User>("users");
-        let new_user = User {
-            _id: "".to_string(),
-            name: request.body.get("name").unwrap_or("").to_string(),
-            email: request.body.get("email").unwrap_or("").to_string(),
-        };
-
-        match collection.insert_one(new_user, None).await {
-            Ok(_) => {
-                let response = Response::new();
-                response.text("User created", 201)
-            }
-            Err(e) => {
-                let response = Response::new();
-                response.error(&e.to_string(), 500)
-            }
-        }
-    }
 });
 ```
 
@@ -218,17 +127,16 @@ router.get("/protected", |_| {
 });
 ```
 
-## Response Types
+### Response Types
 
 The server supports multiple response types:
-
 - **Text**: `response.text("Hello", 200)`
 - **JSON**: `response.json(json!({"key": "value"}), 200)`
 - **HTML**: `response.render("template.html", 200)`
 - **File**: `response.send_file("file.pdf", 200)`
 - **Error**: `response.error("Error message", 500)`
 
-## HTTP Methods
+### HTTP Methods
 
 All standard HTTP methods are supported:
 
@@ -239,8 +147,29 @@ router.put("/resource", handler);
 router.patch("/resource", handler);
 router.delete("/resource", handler);
 ```
-
 Each method also has an async version (e.g., `get_async`, `post_async`) for handling asynchronous operations.
+
+### Example: Main File Setup
+
+In `main.rs`, initialize and run the application as follows:
+
+```rust
+use rust_express::init::App;
+use rust_express::utils::{response::Response, router::Router};
+
+#[tokio::main]
+async fn main() {
+    let mut app = App::new();
+
+    let response_text = "Hello, World";
+
+    app.endpoints(move |router: &mut Router| {
+        router.get("/", |_| Response::new().text(response_text, 200));
+    });
+
+    app.run(4000).await;
+}
+```
 
 ## Contributing
 

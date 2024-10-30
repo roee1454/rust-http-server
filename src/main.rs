@@ -5,11 +5,10 @@ use rust_express::utils::{response::Response, router::Router};
 async fn main() {
     let mut app = App::new();
 
-    let response_text = "Hello, World";
-
     app.endpoints(move |router: &mut Router| {
-        // Configure routes
-        router.get("/", |_| Response::new().text(response_text, 200));
+        router.get("/", |_| {
+            Response::new().text("Hello, World", 200)
+        });
     });
 
     app.run(4000).await;
