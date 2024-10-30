@@ -1,5 +1,7 @@
 [package]
 name = "rust-http"
+description = "An ExpressJS inspired rust crate that handles http request in a similar way to ExpressJS. Created entirely out of bordom, you can pull and expand it as you like!"
+license = "MIT"
 version = "0.1.0"
 edition = "2021"
 
